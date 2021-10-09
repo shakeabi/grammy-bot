@@ -1,7 +1,9 @@
 const Discord = require("discord.js");
 const { prefix, token } = require("./config.json");
 const ytdl = require("ytdl-core");
-const ytsr = require("ytsr")
+const ytsr = require("ytsr");
+const JSONdb = require('simple-json-db');
+const db = new JSONdb('./db.json', {asyncWrite: true});
 
 const client = new Discord.Client();
 
@@ -24,25 +26,35 @@ client.on("message", async message => {
   if (!message.content.startsWith(prefix)) return;
 
   const serverQueue = queue.get(message.guild.id);
-
-  if (message.content.startsWith(`${prefix}play`)) {
-    execute(message, serverQueue);
-    return;
-  } else if (message.content.startsWith(`${prefix}skip`)) {
-    skip(message, serverQueue);
-    return;
-  } else if (message.content.startsWith(`${prefix}stop`)) {
-    stop(message, serverQueue);
-    return;
-  } else if (message.content.startsWith(`${prefix}queue`)) {
-    sendQueueStatus(message, serverQueue);
-    return;
-  } else if (message.content.startsWith(`${prefix}remove`)) {
-    removeFromQueue(message, serverQueue);
-    return;
-  } else {
-    message.channel.send("You need to enter a valid command!");
+  validateSettings = true
+  if(db.has(message.guild.id)){
+    settings = db.get(message.guild.id)
+    if(settings['textChannelId']!=`<#${message.channel.id}>`)
+      validateSettings = false
   }
+
+  if(validateSettings)
+    if (message.content.startsWith(`${prefix}play`)) {
+      execute(message, serverQueue);
+      return;
+    } else if (message.content.startsWith(`${prefix}skip`)) {
+      skip(message, serverQueue);
+      return;
+    } else if (message.content.startsWith(`${prefix}stop`)) {
+      stop(message, serverQueue);
+      return;
+    } else if (message.content.startsWith(`${prefix}queue`)) {
+      sendQueueStatus(message, serverQueue);
+      return;
+    } else if (message.content.startsWith(`${prefix}remove`)) {
+      removeFromQueue(message, serverQueue);
+      return;
+    } else if (message.content.startsWith(`${prefix}setup`)) {
+      setup(message);
+      return;
+    } else {
+      message.channel.send("You need to enter a valid command!");
+    }
 });
 
 async function execute(message, serverQueue) {
@@ -181,6 +193,30 @@ function removeFromQueue(message, serverQueue){
   } else {    
     return message.channel.send("No active queue.");
   }
+}
+
+function setup(message){
+  let data = {};
+  if(db.has(message.guild.id))
+    data = db.get(message.guild.id);
+  
+  const args = message.content.split(" ");
+  args.shift();
+
+  if(!args.length){
+    if(db.has(message.guild.id))
+      return message.channel.send(JSON.stringify(db.get(message.guild.id), null, 2));
+    else
+      return message.channel.send("Channel hasn't been configured yet!")
+  }
+
+  if(args[0] == "textChannel" && /^(<#[0-9]+>)$/.test(args[1])){
+    data['textChannelId'] = args[1]
+    data['textChannel'] = message.cleanContent.split(" ")[2]
+    db.set(message.guild.id, data)
+    message.channel.send("`textChannel` has been successfully set!")
+  }
+
 }
 
 client.login(token);

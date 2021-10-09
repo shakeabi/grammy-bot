@@ -22,6 +22,7 @@
     "ffmpeg": "0.0.4",
     "ffmpeg-static": "^4.4.0",
     "fluent-ffmpeg": "^2.1.2",
+    "simple-json-db": "^1.2.3",
     "ytdl-core": "^4.9.1",
     "ytsr": "^3.5.3"
   }
