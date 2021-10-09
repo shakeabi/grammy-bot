@@ -34,6 +34,9 @@ client.on("message", async message => {
   } else if (message.content.startsWith(`${prefix}stop`)) {
     stop(message, serverQueue);
     return;
+  } else if (message.content.startsWith(`${prefix}queue`)) {
+    sendQueueStatus(message, serverQueue);
+    return;
   } else {
     message.channel.send("You need to enter a valid command!");
   }
@@ -69,7 +72,7 @@ async function execute(message, serverQueue) {
       // console.log(top_result)
       songInfo = await ytdl.getInfo(top_result.url);
   } catch(err){
-      console.log("F", err);
+      console.log(err);
       return message.channel.send("Sry song not found!")
   }
   const song = {
@@ -146,6 +149,20 @@ function play(guild, song) {
     .on("error", error => console.error(error));
   dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
   serverQueue.textChannel.send(`Start playing: **${song.title}**`);
+}
+
+function sendQueueStatus(message, serverQueue){
+  if(serverQueue && serverQueue.songs.length){
+    queueString = serverQueue.songs.map((e,i) => {
+      if(i==0)
+        return `*) ${e.title}`
+      else
+        return `${i}) ${e.title}`
+    }).join("\n")
+    return message.channel.send(queueString);
+  } else {
+    return message.channel.send("No active queue");
+  }
 }
 
 client.login(token);
