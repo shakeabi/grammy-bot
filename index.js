@@ -37,6 +37,9 @@ client.on("message", async message => {
   } else if (message.content.startsWith(`${prefix}queue`)) {
     sendQueueStatus(message, serverQueue);
     return;
+  } else if (message.content.startsWith(`${prefix}remove`)) {
+    removeFromQueue(message, serverQueue);
+    return;
   } else {
     message.channel.send("You need to enter a valid command!");
   }
@@ -141,19 +144,20 @@ function play(guild, song) {
   }
 
   const dispatcher = serverQueue.connection
-    .play(ytdl(song.url))
+    .play(ytdl(song.url, { quality: 'lowest' }))
     .on("finish", () => {
       serverQueue.songs.shift();
       play(guild, serverQueue.songs[0]);
     })
     .on("error", error => console.error(error));
   dispatcher.setVolumeLogarithmic(serverQueue.volume / 5);
-  serverQueue.textChannel.send(`Start playing: **${song.title}**`);
+  serverQueue.textChannel.send(`Started playing: **${song.title}**`);
 }
 
 function sendQueueStatus(message, serverQueue){
+  let queueString=`**Queue** [${serverQueue.songs.length}]\n`
   if(serverQueue && serverQueue.songs.length){
-    queueString = serverQueue.songs.map((e,i) => {
+    queueString += serverQueue.songs.map((e,i) => {
       if(i==0)
         return `*) ${e.title}`
       else
@@ -162,6 +166,20 @@ function sendQueueStatus(message, serverQueue){
     return message.channel.send(queueString);
   } else {
     return message.channel.send("No active queue");
+  }
+}
+
+function removeFromQueue(message, serverQueue){
+  if(serverQueue && serverQueue.songs.length){
+    const args = message.content.split(" ");
+    const index = parseInt(args[1]);
+    if(serverQueue.songs[index]){
+      const removedSong = serverQueue.songs.splice(index,1);
+      return message.channel.send(`Removed ${removedSong[0].title}`)
+    } else
+      return message.channel.send(`Request index doesnt exist. Try !queue.`)
+  } else {    
+    return message.channel.send("No active queue.");
   }
 }
 
