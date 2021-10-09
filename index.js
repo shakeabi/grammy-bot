@@ -1,6 +1,7 @@
 const Discord = require("discord.js");
 const { prefix, token } = require("./config.json");
 const ytdl = require("ytdl-core");
+const ytsr = require("ytsr")
 
 const client = new Discord.Client();
 
@@ -40,7 +41,7 @@ client.on("message", async message => {
 
 async function execute(message, serverQueue) {
   const args = message.content.split(" ");
-
+  args.shift()
   const voiceChannel = message.member.voice.channel;
   if (!voiceChannel)
     return message.channel.send(
@@ -53,10 +54,23 @@ async function execute(message, serverQueue) {
     );
   }
 
+  let songInfo = {}
   try{
-      const songInfo = await ytdl.getInfo(args[1]);
+      const searchString = args.join(" ")
+      const filters1 = await ytsr.getFilters(searchString);
+      const filter1 = filters1.get('Type').get('Video');
+      const searchResults = await ytsr(filter1.url, {pages: 1});
+      // console.log(searchResults)
+      let top_result = {};
+      if(searchResults['items'].length)
+        top_result = searchResults['items'][0]
+      else
+        throw Error("No results found")
+      // console.log(top_result)
+      songInfo = await ytdl.getInfo(top_result.url);
   } catch(err){
       console.log("F", err);
+      return message.channel.send("Sry song not found!")
   }
   const song = {
         title: songInfo.videoDetails.title,
@@ -64,7 +78,7 @@ async function execute(message, serverQueue) {
    };
 
   if (!serverQueue) {
-    const queueContruct = {
+    const queueContract = {
       textChannel: message.channel,
       voiceChannel: voiceChannel,
       connection: null,
@@ -73,14 +87,14 @@ async function execute(message, serverQueue) {
       playing: true
     };
 
-    queue.set(message.guild.id, queueContruct);
+    queue.set(message.guild.id, queueContract);
 
-    queueContruct.songs.push(song);
+    queueContract.songs.push(song);
 
     try {
       var connection = await voiceChannel.join();
-      queueContruct.connection = connection;
-      play(message.guild, queueContruct.songs[0]);
+      queueContract.connection = connection;
+      play(message.guild, queueContract.songs[0]);
     } catch (err) {
       console.log(err);
       queue.delete(message.guild.id);
